@@ -1,0 +1,561 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Drag from the ground to orbit and watch pressure, gases, gravity and Earth's spin change, with predictions anyone can test.">
+<meta property="og:title" content="Sea Level to Space">
+<meta property="og:description" content="Drag from the ground to orbit and watch pressure, gases, gravity and Earth's spin change, with predictions anyone can test.">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary">
+<style>
+:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+img{max-width:100%}
+[hidden]{display:none!important}
+</style>
+<title>Sea Level to Space</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: an instrument sounding. One tall altitude column you drag, a readout panel that answers to it,
+   then three evidence charts and plain checks anyone can run. */
+:root{
+  --paper:#edf1f5; --panel:#fafbfc; --ink:#10202f; --ink-2:#42556a; --ink-3:#6b7d90; --rule:#ccd6e0;
+  --accent:#b25f00; --accent-ink:#ffffff; --accent-soft:#f6e3c8;
+  --sky-a:#4f8fcf; --sky-b:#2a5fad; --sky-c:#152a63; --sky-d:#0a1030; --sky-e:#05060f; --on-sky:#ffffff;
+  --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --s4:#eda100; --s5:#e87ba4; --s6:#008300;
+  --f-display:"Barlow Condensed","Arial Narrow","Helvetica Neue",Arial,sans-serif;
+  --f-body:"Barlow","Helvetica Neue",Arial,sans-serif;
+  --f-data:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --paper:#0c1420; --panel:#131e2d; --ink:#e8eef5; --ink-2:#a9b8c8; --ink-3:#7e8fa3; --rule:#27364b;
+  --accent:#f0a430; --accent-ink:#1a1204; --accent-soft:#3a2a10;
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500; --s5:#d55181; --s6:#008300;
+  color-scheme:dark } }
+:root[data-theme="dark"]{
+  --paper:#0c1420; --panel:#131e2d; --ink:#e8eef5; --ink-2:#a9b8c8; --ink-3:#7e8fa3; --rule:#27364b;
+  --accent:#f0a430; --accent-ink:#1a1204; --accent-soft:#3a2a10;
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500; --s5:#d55181; --s6:#008300;
+  color-scheme:dark }
+
+*{box-sizing:border-box}
+body{background:var(--paper);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.5;margin:0}
+.wrap{max-width:1180px;margin:0 auto;padding-inline:clamp(16px,3vw,32px);padding-block:28px 56px;display:flex;flex-direction:column;gap:36px}
+h1,h2,h3{font-family:var(--f-display);font-weight:600;line-height:1.05;margin:0;text-wrap:balance}
+h1{font-size:clamp(2.4rem,6vw,3.6rem);letter-spacing:.005em;text-transform:uppercase}
+h2{font-size:1.75rem;text-transform:uppercase;letter-spacing:.02em}
+h3{font-size:1.25rem;letter-spacing:.01em}
+p{margin:0}
+a{color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.lab{font-family:var(--f-display);font-weight:600;font-size:.82rem;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-3)}
+.num{font-family:var(--f-data);font-variant-numeric:tabular-nums}
+
+header.top{display:flex;flex-wrap:wrap;gap:16px 32px;align-items:flex-end;justify-content:space-between}
+header.top .lede{max-width:58ch;color:var(--ink-2);margin-top:10px}
+.seg{display:inline-flex;border:1px solid var(--rule);border-radius:6px;overflow:hidden;background:var(--panel)}
+.seg button{font:600 .9rem var(--f-display);letter-spacing:.08em;text-transform:uppercase;padding:8px 14px;border:0;background:transparent;color:var(--ink-2);cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
+
+/* explorer */
+.explorer{display:grid;gap:20px 32px;grid-template-columns:minmax(300px,390px) minmax(0,1fr);grid-template-areas:"col hud" "col groups";align-items:start}
+.colbox{grid-area:col;display:flex;flex-direction:column;gap:10px;position:sticky;top:calc(env(safe-area-inset-top,0px) + 12px)}
+#col{position:relative;height:clamp(420px,calc(100vh - 190px),620px);width:100%}
+#col svg{display:block}
+#drag{position:absolute;left:0;top:0;bottom:0;touch-action:none;cursor:ns-resize}
+#altRange{width:100%;accent-color:var(--accent);margin:0}
+.scale-note{font-size:.8rem;color:var(--ink-3)}
+.hud{grid-area:hud;display:flex;flex-direction:column;gap:8px;min-width:0}
+.hud .big{font-family:var(--f-data);font-weight:500;font-size:clamp(2.2rem,6vw,3.4rem);line-height:1;font-variant-numeric:tabular-nums}
+.hud .sub{font-family:var(--f-data);color:var(--ink-2);font-size:.95rem}
+.layer{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:baseline;margin-top:6px}
+.layer .name{font:700 1.5rem var(--f-display);text-transform:uppercase;letter-spacing:.04em;color:var(--accent)}
+.layer .range{font-family:var(--f-data);font-size:.85rem;color:var(--ink-3)}
+#layerText{max-width:62ch;color:var(--ink-2);min-height:6em}
+.groups{grid-area:groups;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px 32px}
+.group{display:flex;flex-direction:column;gap:2px;min-width:0;border-top:2px solid var(--ink);padding-top:10px}
+.group h3{margin-bottom:6px}
+.row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 12px;padding:7px 0;border-bottom:1px solid var(--rule);align-items:baseline}
+.row .k{font-size:.92rem;color:var(--ink-2)}
+.row .v{font-family:var(--f-data);font-variant-numeric:tabular-nums;font-size:.98rem;text-align:right;font-weight:500}
+.row .n{grid-column:1 / -1;font-size:.8rem;color:var(--ink-3);font-family:var(--f-data)}
+.gnote{font-size:.85rem;color:var(--ink-2);margin-top:8px}
+.mix{display:flex;gap:2px;height:22px;margin:4px 0 6px;border-radius:4px;overflow:hidden}
+.mix i{display:block;min-width:0}
+.sw{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:8px;vertical-align:baseline}
+.latrow{display:flex;flex-direction:column;gap:4px;padding:6px 0 8px;border-bottom:1px solid var(--rule)}
+.latrow label{display:flex;justify-content:space-between;font-size:.92rem;color:var(--ink-2)}
+.latrow input{width:100%;accent-color:var(--accent);margin:0}
+
+/* column svg */
+.c-tick{font:500 11.5px var(--f-data);fill:var(--ink-3)}
+.c-layer{font:600 11px var(--f-display);letter-spacing:.05em;fill:var(--on-sky);text-transform:uppercase}
+.lm{cursor:pointer}
+.lm text{font:500 13.5px var(--f-display);letter-spacing:.02em;fill:var(--ink)}
+.lm .alt{fill:var(--ink-3);font:400 11px var(--f-data);letter-spacing:0}
+.lm:hover text,.lm:focus-visible text{fill:var(--accent)}
+.lm line,.lm polyline{stroke:var(--ink-3);stroke-width:1;fill:none}
+.mk-pill{fill:var(--accent)}
+.mk-text{font:500 11px var(--f-data);fill:var(--accent-ink)}
+
+/* evidence */
+.charts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:36px 40px}
+.fig{display:flex;flex-direction:column;gap:10px;min-width:0}
+.fig.wide{grid-column:1 / -1}
+.fig p{color:var(--ink-2);max-width:68ch}
+.plot{position:relative;background:var(--panel);border:1px solid var(--rule);border-radius:6px;padding:10px 6px 4px}
+.plot svg{display:block;cursor:crosshair}
+.ax{font:400 11px var(--f-data);fill:var(--ink-3)}
+.axt{font:600 11.5px var(--f-display);letter-spacing:.08em;text-transform:uppercase;fill:var(--ink-3)}
+.dl{font:500 12.5px var(--f-display);letter-spacing:.02em;fill:var(--ink)}
+.grid{stroke:var(--rule);stroke-width:1}
+.tip{position:absolute;top:8px;pointer-events:none;background:var(--ink);color:var(--paper);font:400 12px/1.45 var(--f-data);padding:6px 9px;border-radius:4px;white-space:nowrap;z-index:2}
+.legend{display:flex;flex-wrap:wrap;gap:4px 16px;font-size:.85rem;color:var(--ink-2)}
+.ptitle{font:600 .82rem var(--f-display);letter-spacing:.09em;text-transform:uppercase;color:var(--ink-3);padding:0 6px 4px}
+
+.tests{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px 32px}
+.tg{font-size:1.05rem;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-3);margin-top:6px}
+.test{display:flex;flex-direction:column;gap:6px;border-top:1px solid var(--ink-3);padding-top:10px;min-width:0}
+.test p{color:var(--ink-2);font-size:.95rem}
+.test .pred{font-family:var(--f-data);font-size:.85rem;color:var(--ink);background:var(--accent-soft);padding:6px 8px;border-radius:4px}
+.qa{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px 40px}
+.qa div{display:flex;flex-direction:column;gap:6px;min-width:0}
+.qa h3{color:var(--accent)}
+.qa p{color:var(--ink-2)}
+section{display:flex;flex-direction:column;gap:18px}
+.sec-lede{color:var(--ink-2);max-width:68ch}
+footer{border-top:1px solid var(--rule);padding-top:16px;font-size:.85rem;color:var(--ink-3);display:flex;flex-direction:column;gap:6px;max-width:90ch}
+
+@media (max-width:860px){
+  .explorer{grid-template-columns:minmax(0,1fr);grid-template-areas:"hud" "col" "groups"}
+  .colbox{position:static}
+  #col{height:480px}
+  #layerText{min-height:0}
+  .charts,.qa{grid-template-columns:minmax(0,1fr)}
+  .tests{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media (max-width:560px){
+  .groups,.tests{grid-template-columns:minmax(0,1fr)}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>Sea Level to Space</h1>
+      <p class="lede">Drag the marker from the ground to orbit and watch the air thin out, the gases change, and gravity ease off. The readings follow the U.S. Standard Atmosphere and Newton's law of gravity. The ones near the ground can be checked with a phone, a kettle, or a clear night. The rest follow from the same physics.</p>
+    </div>
+    <div class="seg" role="group" aria-label="Units">
+      <button type="button" id="uUS" aria-pressed="true">US units</button>
+      <button type="button" id="uSI" aria-pressed="false">Metric</button>
+    </div>
+  </header>
+
+  <div class="explorer">
+    <div class="hud" aria-live="polite">
+      <span class="lab">Altitude above sea level</span>
+      <div class="big" id="hAlt">35,000 ft</div>
+      <div class="sub" id="hAltSub">10.7 km</div>
+      <div class="layer"><span class="name" id="layerName">Troposphere</span><span class="range" id="layerRange"></span></div>
+      <p id="layerText"></p>
+    </div>
+
+    <div class="colbox">
+      <div id="col"><div id="drag" aria-hidden="true"></div></div>
+      <label class="lab" for="altRange">Altitude slider</label>
+      <input type="range" id="altRange" min="0" max="1000" step="1" value="163">
+      <span class="scale-note">The column is stretched at the bottom so the lower layers are readable. Tap a landmark to jump to it.</span>
+    </div>
+
+    <div class="groups">
+      <div class="group">
+        <h3>The air here</h3>
+        <div class="row"><span class="k">Pressure</span><span class="v" id="rP"></span><span class="n" id="rPn"></span></div>
+        <div class="row"><span class="k">Air still above you</span><span class="v" id="rAbove"></span></div>
+        <div class="row"><span class="k">Density</span><span class="v" id="rRho"></span></div>
+        <div class="row"><span class="k">Temperature</span><span class="v" id="rT"></span><span class="n" id="rTn"></span></div>
+        <div class="row"><span class="k">Gas particles per cubic centimetre</span><span class="v" id="rN"></span></div>
+        <div class="row"><span class="k">Average distance a particle travels between collisions</span><span class="v" id="rMfp"></span></div>
+        <div class="row"><span class="k">Water boils at</span><span class="v" id="rBoil"></span><span class="n" id="rBoilN"></span></div>
+      </div>
+
+      <div class="group">
+        <h3>What the air is made of</h3>
+        <div class="mix" id="mixBar" role="img" aria-label="Gas mix at this altitude"></div>
+        <div id="mixRows"></div>
+        <p class="gnote" id="mixNote"></p>
+      </div>
+
+      <div class="group">
+        <h3>Gravity</h3>
+        <div class="row"><span class="k">Earth's pull here</span><span class="v" id="rG"></span><span class="n" id="rGn"></span></div>
+        <div class="row"><span class="k" id="rWk">A 200 lb person on a tower this tall weighs</span><span class="v" id="rW"></span></div>
+        <div class="row"><span class="k">Climbed out of Earth's gravity well</span><span class="v" id="rWell"></span><span class="n" id="rWellN"></span></div>
+        <div class="row"><span class="k">Sideways speed needed to stay in orbit</span><span class="v" id="rOrb"></span><span class="n" id="rOrbN"></span></div>
+        <div class="row"><span class="k">Speed needed to escape Earth from here</span><span class="v" id="rEsc"></span></div>
+        <p class="gnote">Astronauts float because they are falling around the Earth the whole time. Gravity at the space station is still about 88% of what you feel now.</p>
+      </div>
+
+      <div class="group">
+        <h3>Earth's spin</h3>
+        <div class="latrow"><label for="latRange"><span>Your latitude</span><span class="num" id="latVal">30°</span></label><input type="range" id="latRange" min="0" max="90" step="1" value="30"></div>
+        <div class="row"><span class="k">Ground below you moves east at</span><span class="v" id="rVg"></span></div>
+        <div class="row"><span class="k">Air at this altitude keeps pace at</span><span class="v" id="rVa"></span><span class="n" id="rVaN"></span></div>
+        <div class="row"><span class="k">Orbit needs this many times the spin speed</span><span class="v" id="rRatio"></span></div>
+        <div class="row"><span class="k">The spin lightens your weight by</span><span class="v" id="rFling"></span><span class="n">One turn every 23 h 56 min = 15° per hour, half the pace of a clock's hour hand.</span></div>
+      </div>
+    </div>
+  </div>
+
+  <section>
+    <h2>Three patterns behind the numbers</h2>
+    <div class="charts">
+      <div class="fig">
+        <h3>The air has no top edge. It fades.</h3>
+        <p>Pressure is the weight of the air stacked above you. Climb, and there is less above: the pressure is down to half by <span id="halfTxt">18,000 ft</span> and falls roughly tenfold with every 10 miles (16 km). On this scale each gridline is ten times thinner than the one above it, and the fade is close to a straight line across the chart. Higher up it keeps fading, more slowly, and never reaches a hard zero.</p>
+        <div class="plot" id="pPlot"><div class="ptitle">Pressure, % of sea level</div><div class="tip" hidden></div></div>
+      </div>
+      <div class="fig">
+        <h3>Gravity weakens with the square of distance</h3>
+        <p>The line is the inverse-square law, drawn from surface gravity and Earth's radius. Each dot is the pull needed to hold that object on its orbit, worked out from its distance and lap time. They fall on the line. The Moon sits 1% above it because the Moon's own mass adds to the pull. Ham radio operators time the Moon's distance by echo (about 2.5 seconds), and the tilt of any satellite dish gives the geostationary distance. The amber stretch is the whole range of the slider above.</p>
+        <div class="plot" id="gPlot"><div class="ptitle">Earth's pull, % of sea level</div><div class="tip" hidden></div></div>
+      </div>
+      <div class="fig wide">
+        <h3>Above 60 miles (100 km) the gases sort by weight</h3>
+        <p>Lower down, wind and turbulence keep the mix the same everywhere: 78% nitrogen, 21% oxygen. Higher up there is too little air to stir, so each gas settles by its own weight, and sunlight splits O₂ into single atoms. The heaviest (argon, O₂, then N₂) thin out fastest. Lighter oxygen atoms take over from about 110 miles (180 km) and helium from about 400 miles (650 km). Hydrogen takes over higher still, beyond this chart. Gas centrifuges use the same effect to separate uranium isotopes by weight. The aurora's colours largely reflect this layering: green and red from oxygen atoms, pink from nitrogen at the lower fringe.</p>
+        <div class="legend" id="gasLegend"></div>
+        <div class="plot" id="cPlot"><div class="ptitle">Share of particles at each altitude</div><div class="tip" hidden></div></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Check it yourself</h2>
+    <p class="sec-lede">Each of these is a number the physics commits to in advance. The first three show that air is held down by its own weight and needs no lid. They would come out the same on any world with a downward pull, so they do not settle the shape of the Earth. The last three are the ones that tell a turning globe from a flat plane.</p>
+    <h3 class="tg">Checks on the air column</h3>
+    <div class="tests">
+      <div class="test"><h3>Carry a barometer app upstairs</h3><p>Many phones have a pressure sensor. Note the reading on the ground floor and again ten storeys up. Then try it in a closed room, floor to ceiling.</p><p class="pred">Predicted: about 3.6 hPa lower per 100 ft of climb near sea level. Pilots use 1 inch of mercury per 1,000 ft. In a closed room, about 0.12 hPa lower per metre, with no help from the walls.</p></div>
+      <div class="test"><h3>Boil water on a mountain</h3><p>Lower pressure lets water boil cooler. Put a thermometer in a rolling boil at two different elevations. It is why food packages carry high-altitude directions.</p><p class="pred">Predicted: about 1 °F lower for every 500 ft climbed. About 202 °F (95 °C) in Denver and 160 °F (71 °C) on Everest's summit.</p></div>
+      <div class="test"><h3>Watch a weather balloon</h3><p>The National Weather Service normally launches them twice a day from about 90 sites. Hobbyists fly cameras on the same kind of balloon and film it swelling as the outside pressure falls.</p><p class="pred">Predicted: 4.5 to 5 times its launch width when it bursts above 100,000 ft, where pressure is under 1% of sea level. Weather Service balloons go from about 5 ft to 20 or 25 ft.</p></div>
+    </div>
+    <h3 class="tg">Checks that tell a spinning globe from a flat plane</h3>
+    <div class="tests">
+      <div class="test"><h3>Time and measure the space station</h3><p>Find a pass with a tracker such as <a href="https://claude.ai/artifact/D3bcSL4V9tMnJvrqjs5yyC">Overhead Now</a>. Two people 100 miles or more apart who photograph the same pass against the stars can work out its height from the shift. Radio amateurs hear its 145.800 MHz signal slide by about 3 kHz each way as it passes, which gives its speed.</p><p class="pred">Predicted: about 250 miles up, visible for 4 to 6 minutes on a good pass. One lap later, 93 minutes on, its track has moved 23° of longitude west, roughly 1,300 miles at mid-latitudes, because the ground turned under the orbit.</p></div>
+      <div class="test"><h3>Watch a Foucault pendulum</h3><p>Many science museums have one. The floor turns under the swing. Ship and aircraft gyroscopes sense the same turn, and so did the ring laser gyroscope run by flat-earth investigators in the 2018 film Behind the Curve.</p><p class="pred">Predicted: 15° per hour times the sine of the latitude. 11.3° per hour in Paris, zero on the equator, reversed south of it. A flat spinning disc would give the same rate everywhere.</p></div>
+      <div class="test"><h3>Weigh the same mass in two places</h3><p>Carry a 500 g calibration weight and a 0.01 g scale north or south by 15° of latitude, say Florida to the Great Lakes. Let the scale warm up, keep the room temperature and elevation similar, and do not recalibrate.</p><p class="pred">Predicted: about 0.7 g heavier at the northern end. From equator to pole the difference is 0.5% (9.780 against 9.832 m/s²), from the spin plus the bulge it causes.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Common objections, with numbers</h2>
+    <div class="qa">
+      <div><h3>"Gas needs a container. That is the second law."</h3><p>A container is one way to hold gas. Weight is another. Every layer of air is squeezed by the air stacked above it and held down by gravity, so pressure eases off gradually with height. Nowhere in the open atmosphere does full-pressure air sit next to a vacuum. A gas spreads out evenly only where nothing pulls on it. Under a steady pull it settles into this fade. You can see it inside a closed room, where the walls play no part: a phone barometer reads about 0.12 hPa lower for each metre you lift it. A gas centrifuge shows it in a machine, with gas pressed against the spinning wall, near-vacuum at the centre and no barrier between.</p></div>
+      <div><h3>"Gas expands to fill a vacuum, so the air would rush off into space"</h3><p>Gas spreads until something balances its push. In a jar the walls do that. In the open air the weight of each layer does. To leave Earth for good a molecule must reach about 11 km/s (25,000 mph), and a typical nitrogen molecule moves at about 0.5 km/s. Only hydrogen and helium, the lightest gases, get away from the very top, at roughly 3 kg and 50 g a second. That is about 100,000 tonnes a year from an atmosphere of 5 million billion tonnes. The leak is why helium is only 5 parts per million of the air even though rocks release it constantly.</p></div>
+      <div><h3>"It is density and buoyancy. No gravity needed."</h3><p>Density has no direction. Something has to decide which way is down and push the denser material that way. That push is weight: the buoyant force on an object equals the weight of the fluid it displaces. Take weight away and buoyancy stops. Drop a leaking water bottle and the leak stops while it falls. In a vacuum chamber, with no air to float in, a feather and a coin fall together. In a braking car a helium balloon swings backward, because the air piles toward the front.</p></div>
+      <div><h3>"We would feel 1,000 mph, and 67,000 mph around the Sun"</h3><p>You feel changes in speed and direction, and what matters is how sharp the turn is. A playground merry-go-round at 10 turns a minute turns about 14,000 times faster than the Earth. For someone standing still, the spin's only effect is a slight outward lift: about a third of one percent of gravity at the equator and zero at the poles. Gravity holds the oceans about 290 times harder than the spin flings them. The path around the Sun bends even more gently, 0.06% of gravity, and everything on Earth follows it together, so nothing registers. Moving things also get a gentle sideways push from the spin. It turns the Foucault pendulum and makes hurricanes rotate opposite ways north and south of the equator.</p></div>
+      <div><h3>"The air would be left behind as a 1,000 mph wind"</h3><p>Nothing has to drag the air along. It is already moving with the ground and nothing stops it, like the air inside an airliner cabin at 550 mph. Empty space offers nothing to rub against. Friction with the surface only evens out differences, and the differences that remain are the winds.</p></div>
+      <div><h3>"The thermosphere is 2,000°, so satellites would melt"</h3><p>Temperature measures how fast molecules move. Heat delivered depends on how many of them hit you. Sparks from a grinder are well over 1,000 °F and bounce off your hand, while water at 212 °F scalds, because the water delivers far more heat. At the space station's height there are hundreds of billions of times fewer gas particles in a given volume than at sea level, so they deliver almost no heat. A satellite's temperature is set by sunlight and by what it radiates away.</p></div>
+      <div><h3>"Gravity is 88% at the station, yet astronauts float"</h3><p>Floating is what free fall feels like. The station and everyone in it are falling around the Earth together, moving sideways fast enough to keep missing it. Toss your phone with an accelerometer app running. It reads zero for the moment it is in the air, at full gravity, a few feet off the floor.</p></div>
+      <div><h3>"Gravity holds the oceans but a butterfly can beat it"</h3><p>At the surface gravity pulls on every kilogram equally hard: 9.8 newtons per kilogram. An ocean is heavy because it has an enormous mass. A butterfly weighs about half a gram, so the pull on it is about five thousandths of a newton, and its wings easily produce that much lift.</p></div>
+      <div><h3>"Michelson and Morley proved the Earth is not moving"</h3><p>That 1887 experiment looked for an aether wind from Earth's motion around the Sun and found none. It was not a test of rotation. Michelson tested rotation in 1925 with light sent around a 1.9 km loop of pipe in Illinois, and measured it: 0.230 of a fringe observed against 0.237 predicted. Ring laser gyroscopes repeat that measurement continuously today.</p></div>
+      <div><h3>"These numbers all come from NASA and the government"</h3><p>The Standard Atmosphere is a summary of measurements. The bottom 20 miles is measured twice a day by balloons launched in nearly every country, rivals included, and by hobbyists with ten-dollar pressure sensors. Every aircraft altimeter is built on it. The height of night-shining clouds was triangulated from the ground in the 1880s, and amateur camera networks triangulate meteor heights today. The checks above let you sample it yourself.</p></div>
+    </div>
+  </section>
+
+  <footer>
+    <span>Atmosphere: U.S. Standard Atmosphere, 1976 (NOAA, NASA, U.S. Air Force), computed from its layer equations below 86 km and interpolated from its tables above. It describes average mid-latitude conditions. Real air varies with weather, season and latitude. Above 150 km the density swings about tenfold with the 11-year solar cycle, and the temperature there runs from roughly 900 to 2,000 °F (470 to 1,080 °C). The page shows the mid-cycle value.</span>
+    <span>Gravity and spin: WGS 84 Earth constants (GM = 398,600.4418 km³/s², equatorial radius 6,378.137 km, rotation rate 7.292115 × 10⁻⁵ rad/s), with a mean radius of 6,371 km for gravity and orbits. Orbit radius and period: ISS 6,795 km and 92.9 min; GPS 26,560 km and 11 h 58 min; geostationary 42,164 km and 23 h 56 min; Moon 384,400 km and 27.32 days.</span>
+    <span>Layer boundaries are averages. The top of the troposphere sits near 5 miles (8 km) at the poles and 11 miles (18 km) in the tropics.</span>
+  </footer>
+</div>
+
+<script>
+(function(){
+'use strict';
+/*MODEL-START*/
+const RE=6371.0, GM=3.986004418e14, OMEGA=7.292115e-5, KB=1.380649e-23, R0=6356.766, P0=101325, RHO0=1.225;
+const EQ_A=6378.137, E2=0.00669438;
+const LOW=[[0,288.15,-6.5,101325],[11,216.65,0,22632.06],[20,216.65,1,5474.889],[32,228.65,2.8,868.0187],[47,270.65,0,110.9063],[51,270.65,-2.8,66.93887],[71,214.65,-2,3.956420]];
+const HI=[[86,186.87,0.3734,6.958e-6],[90,186.87,0.1836,3.416e-6],[95,188.42,0.075966,1.393e-6],[100,195.08,0.03201,5.604e-7],[105,208.84,0.014477,2.325e-7],[110,240.00,0.007104,9.708e-8],[115,300.00,0.0040096,4.289e-8],[120,360.00,0.002538,2.222e-8],[130,469.27,0.001251,8.152e-9],[140,559.63,7.203e-4,3.831e-9],[150,634.39,4.542e-4,2.076e-9],[160,696.29,3.040e-4,1.233e-9],[180,790.07,1.527e-4,5.194e-10],[200,854.56,8.474e-5,2.541e-10],[250,941.33,2.477e-5,6.073e-11],[300,976.01,8.770e-6,1.916e-11],[350,990.06,3.450e-6,7.014e-12],[400,995.83,1.452e-6,2.803e-12],[450,998.22,6.447e-7,1.184e-12],[500,999.24,3.024e-7,5.215e-13],[600,999.85,8.213e-8,1.137e-13],[700,999.97,3.191e-8,3.070e-14],[800,999.99,1.704e-8,1.136e-14],[900,1000,1.087e-8,5.759e-15],[1000,1000,7.514e-9,3.561e-15]];
+const SPZ=[86,90,95,100,110,120,150,200,300,400,500,600,700,800,1000];
+const SPK=['N2','O2','Ar','O','He','H'];
+const SPN={
+ N2:[1.130e20,5.547e19,2.268e19,9.210e18,1.641e18,3.726e17,3.124e16,2.925e15,9.593e13,4.669e12,2.592e11,1.575e10,1.038e9,7.377e7,4.626e5],
+ O2:[3.031e19,1.479e19,5.830e18,2.151e18,2.621e17,4.395e16,2.750e15,1.918e14,3.942e12,1.252e11,4.607e9,1.880e8,8.410e6,4.105e5,1.251e3],
+ Ar:[1.351e18,6.574e17,2.583e17,9.501e16,1.046e16,1.366e15,5.000e13,1.938e12,1.568e10,2.124e8,3.445e6,6.351e4,1.313e3,3.027e1,2.188e-2],
+ O:[8.600e16,2.443e17,4.365e17,4.298e17,2.303e17,9.275e16,1.780e16,4.050e15,5.443e14,9.584e13,1.836e13,3.707e12,7.840e11,1.732e11,9.562e9],
+ He:[7.582e14,3.976e14,1.973e14,1.133e14,5.821e13,3.888e13,2.106e13,1.310e13,7.566e12,4.868e12,3.215e12,2.154e12,1.461e12,1.001e12,4.850e11],
+ H:[0,0,0,0,0,0,3.767e11,1.630e11,1.049e11,8.960e10,8.000e10,7.231e10,6.556e10,5.961e10,4.967e10]};
+function lerpLog(a,b,t){return (a<=0||b<=0)?0:Math.exp(Math.log(a)+(Math.log(b)-Math.log(a))*t);}
+function atm(z){ // z in km -> T (K), P (Pa), rho (kg/m3)
+  z=Math.max(0,Math.min(1000,z));
+  if(z<86){
+    const H=R0*z/(R0+z); let i=LOW.length-1; while(i>0&&H<LOW[i][0]) i--;
+    const Hb=LOW[i][0],Tb=LOW[i][1],L=LOW[i][2],Pb=LOW[i][3];
+    const T=Tb+L*(H-Hb);
+    const P=L===0?Pb*Math.exp(-34.1632*(H-Hb)/Tb):Pb*Math.pow(Tb/T,34.1632/L);
+    return {T:T,P:P,rho:P/(287.053*T)};
+  }
+  let i=0; while(i<HI.length-2&&z>HI[i+1][0]) i++;
+  const a=HI[i],b=HI[i+1],t=(z-a[0])/(b[0]-a[0]);
+  return {T:a[1]+(b[1]-a[1])*t,P:lerpLog(a[2],b[2],t),rho:lerpLog(a[3],b[3],t)};
+}
+function mix(z){ // particle fractions
+  if(z<86) return {N2:0.78084,O2:0.20948,Ar:0.00934,O:0,He:5.24e-6,H:0};
+  z=Math.min(1000,z);
+  let i=0; while(i<SPZ.length-2&&z>SPZ[i+1]) i++;
+  const t=(z-SPZ[i])/(SPZ[i+1]-SPZ[i]); const n={}; let s=0;
+  SPK.forEach(function(k){n[k]=lerpLog(SPN[k][i],SPN[k][i+1],t); s+=n[k];});
+  SPK.forEach(function(k){n[k]/=s;}); return n;
+}
+function gSurf(lat){const s=Math.sin(lat*Math.PI/180), s2=Math.sin(2*lat*Math.PI/180); return 9.780327*(1+0.0053024*s*s-0.0000058*s2*s2);}
+function cfVert(z,lat){return OMEGA*OMEGA*axisDist(z,lat)*1000*Math.cos(lat*Math.PI/180);} // part of the spin's outward pull that acts against weight
+function gAt(z,lat){return (gSurf(lat)+cfVert(0,lat))*Math.pow(RE/(RE+z),2)-cfVert(z,lat);} // what a scale on a tower would feel
+function gRatio(z){return Math.pow(RE/(RE+z),2);}
+function vOrb(z){return Math.sqrt(GM/((RE+z)*1000));}
+function vEsc(z){return Math.sqrt(2*GM/((RE+z)*1000));}
+function axisDist(z,lat){const f=lat*Math.PI/180, s=Math.sin(f); return (EQ_A/Math.sqrt(1-E2*s*s)+z)*Math.cos(f);} // km
+function vSpin(z,lat){return OMEGA*axisDist(z,lat)*1000;}
+function boilC(P){ if(P<611.657) return null; return 1730.63/(8.07131-Math.log10(P/133.322))-233.426; }
+function mfp(T,P){return KB*T/(Math.SQRT2*Math.PI*Math.pow(3.65e-10,2)*P);}
+function zAtPressure(r){let lo=0,hi=200; for(let i=0;i<60;i++){const m=(lo+hi)/2; if(atm(m).P/P0>r) lo=m; else hi=m;} return (lo+hi)/2;}
+/*MODEL-END*/
+
+const $=function(id){return document.getElementById(id);};
+const S={z:10.668,lat:30,units:'us'};
+try{const u=localStorage.getItem('sl2s-units'); if(u==='si'||u==='us') S.units=u;}catch(e){}
+const EXP=0.4;
+const frac=function(z){return Math.pow(Math.max(0,z)/1000,EXP);};
+const unfrac=function(f){return 1000*Math.pow(Math.max(0,Math.min(1,f)),1/EXP);};
+
+/* ---------- formatting ---------- */
+const SUP={'-':'⁻','0':'⁰','1':'¹','2':'²','3':'³','4':'⁴','5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹'};
+function sci(x,d){d=d==null?1:d; let e=Math.floor(Math.log10(Math.abs(x))), m=x/Math.pow(10,e); if(+m.toFixed(d)>=10){m/=10;e++;}
+  return m.toFixed(d)+' × 10'+String(e).split('').map(function(c){return SUP[c];}).join('');}
+function loc(x){return x.toLocaleString('en-US');}
+function fnum(x){ if(x===0) return '0'; const a=Math.abs(x); if(a>=1e6||a<1e-3) return sci(x);
+  if(a>=100) return loc(Math.round(x)); if(a>=10) return x.toFixed(1); if(a>=1) return x.toFixed(2); return String(Number(x.toPrecision(2))); }
+function fPct(p){ if(p<=0) return '0%'; if(p>=99.95) return '100%'; if(p>=10) return p.toFixed(1)+'%'; if(p>=0.1) return p.toFixed(2)+'%'; if(p>=0.001) return Number(p.toPrecision(2))+'%'; return sci(p)+'%'; }
+function big(x){ if(x<1e6) return loc(Number(x.toPrecision(2))); if(x<1e9) return Number((x/1e6).toPrecision(2))+' million'; if(x<1e12) return Number((x/1e9).toPrecision(2))+' billion'; return loc(Number((x/1e12).toPrecision(2)))+' trillion'; }
+const us=function(){return S.units==='us';};
+function altKm(z){return z<1?Math.round(z*1000)+' m':(z<100?(Math.round(z*10)/10)+' km':loc(Math.round(z))+' km');}
+function altUS(z){ if(z<30){const ft=z*3280.84; return loc(ft<3000?Math.round(ft/10)*10:Math.round(ft/100)*100)+' ft';} return loc(Math.round(z*0.621371))+' mi'; }
+function fAlt(z){return us()?altUS(z):altKm(z);}
+function fAltAlt(z){ if(us()) return altKm(z); return altUS(z); }
+function fTemp(K){const c=K-273.15; return us()?loc(Math.round(c*9/5+32))+' °F':loc(Math.round(c))+' °C';}
+function fSpd(ms){ if(us()){const mph=ms*2.23694; return loc(ms>2000?Math.round(mph/10)*10:Math.round(mph))+' mph';} return ms>=2000?(ms/1000).toFixed(2)+' km/s':loc(Math.round(ms*3.6))+' km/h'; }
+function fPress(P){ if(us()) return fnum(P/6894.757)+' psi'; return P>=100?fnum(P/100)+' hPa':fnum(P)+' Pa'; }
+function fLen(m){ if(m<1e-6) return fnum(m*1e9)+' nm'; if(m<1e-3) return fnum(m*1e6)+' µm';
+  if(us()){ if(m<0.3048) return fnum(m/0.0254)+' in'; if(m<1609.34) return fnum(m/0.3048)+' ft'; return fnum(m/1609.34)+' mi'; }
+  if(m<1) return fnum(m*1000)+' mm'; if(m<1000) return fnum(m)+' m'; return fnum(m/1000)+' km'; }
+function fShare(f){ if(f<1e-7) return 'trace'; if(f<1e-4) return Number((f*1e6).toPrecision(2))+' ppm'; return fPct(f*100); }
+
+/* ---------- data for display ---------- */
+const LAYERS=[
+ {n:'Troposphere',a:0,b:11,t:'Weather happens here. Air warmed by the ground rises, expands and cools, about 3.6 °F for every 1,000 ft (6.5 °C per km). This thin layer holds roughly three quarters of all the air.'},
+ {n:'Stratosphere',a:11,b:50,t:'Ozone absorbs ultraviolet sunlight, so the air gets warmer with height. Warm air over cold is stable, so it sits in layers with little vertical mixing and almost no weather. Jets cruise at its floor and weather balloons burst partway up.'},
+ {n:'Mesosphere',a:50,b:86,t:'Temperature falls again, to about −123 °F (−86 °C) on average at the top and below −200 °F (−130 °C) over the summer pole, the coldest natural spot on Earth, where night-shining clouds form. Most meteors burn up near the top of this layer and just above it.'},
+ {n:'Thermosphere',a:86,b:600,t:'Solar X-rays and extreme ultraviolet split and ionize the gas. Above about 62 miles (100 km) the air stops mixing and sorts itself by weight. Auroras glow here and radio bounces off it. The space station flies through air about a million times thinner than where meteors burn, and still loses about a mile of height a month to drag.'},
+ {n:'Exosphere',a:600,b:1000,t:'Atoms are so far apart that they fly in long arcs and rarely collide. Oxygen atoms give way to helium here and to hydrogen higher up. The fastest hydrogen and helium escape and the rest fall back. It has no upper surface. A faint hydrogen haze has been detected beyond the Moon.'}];
+const MARKS=[
+ {z:1.609,n:'Denver'},{z:8.849,n:'Mt Everest'},{z:10.668,n:'Airliner cruise'},{z:19.2,n:'Armstrong limit'},
+ {z:25,n:'Ozone layer peak'},{z:33,n:'Weather balloons burst'},{z:82,n:'Night-shining clouds'},{z:90,n:'Meteors burn up'},
+ {z:100,n:'Kármán line'},{z:110,n:'Aurora, brightest band'},{z:420,n:'Space station'},{z:480,n:'Starlink satellites'}];
+const GAS=[['N2','N₂','nitrogen','--s1'],['O2','O₂','oxygen','--s2'],['Ar','Ar','argon','--s3'],['O','O','single oxygen atoms','--s4'],['He','He','helium','--s5'],['H','H','hydrogen','--s6']];
+const TICK_SI=[0,5,11,20,50,86,200,400,600,800,1000];
+const TICK_US=[0,3,7,12,31,53,125,250,375,500,621];
+
+/* ---------- column ---------- */
+let CG=null;
+function drawColumn(){
+  const box=$('col'), W=box.clientWidth, H=box.clientHeight, top=16, bot=H-16, ph=bot-top, narrowCol=W<380, bx=narrowCol?48:54, bw=narrowCol?104:116;
+  const y=function(z){return bot-frac(z)*ph;};
+  CG={top:top,bot:bot,ph:ph,bx:bx,bw:bw,y:y};
+  let s='<svg width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Altitude column from sea level to 1,000 km showing the five layers of the atmosphere">';
+  s+='<defs><linearGradient id="sky" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="var(--sky-a)"/><stop offset="'+frac(11)+'" stop-color="var(--sky-b)"/><stop offset="'+frac(50)+'" stop-color="var(--sky-c)"/><stop offset="'+frac(100)+'" stop-color="var(--sky-d)"/><stop offset="1" stop-color="var(--sky-e)"/></linearGradient></defs>';
+  s+='<rect x="'+bx+'" y="'+top+'" width="'+bw+'" height="'+ph+'" rx="5" fill="url(#sky)"/>';
+  (us()?TICK_US.map(function(m){return m*1.609344;}):TICK_SI).forEach(function(z,i){
+    const lbl=us()?loc(TICK_US[i])+(i===0?' mi':''):loc(TICK_SI[i])+(i===0?' km':''), yy=y(Math.min(1000,z));
+    s+='<line x1="'+(bx-5)+'" x2="'+bx+'" y1="'+yy+'" y2="'+yy+'" class="grid" style="stroke:var(--ink-3)"/><text class="c-tick" x="'+(bx-8)+'" y="'+(yy+4)+'" text-anchor="end">'+lbl+'</text>';
+  });
+  LAYERS.forEach(function(L,i){
+    if(i>0) s+='<line x1="'+bx+'" x2="'+(bx+bw)+'" y1="'+y(L.a)+'" y2="'+y(L.a)+'" stroke="var(--on-sky)" stroke-opacity=".45" stroke-width="1" stroke-dasharray="3 3"/>';
+    s+='<text class="c-layer" x="'+(bx+bw/2)+'" y="'+((y(L.a)+y(L.b))/2+4)+'" text-anchor="middle">'+L.n+'</text>';
+  });
+  // landmarks with de-overlap
+  const gap=19, ys=MARKS.map(function(m){return y(m.z);});
+  const ly=ys.slice();
+  for(let it=0;it<80;it++){ for(let i=0;i<ly.length-1;i++){ const d=ly[i]-ly[i+1]; if(d<gap){const p=(gap-d)/2; ly[i]+=p; ly[i+1]-=p;} }
+    for(let i=0;i<ly.length;i++) ly[i]=Math.max(top+6,Math.min(bot-2,ly[i])); }
+  const lx=bx+bw+(narrowCol?20:26);
+  const lmAlt=function(z){ if(narrowCol&&us()&&z<30){const k=z*3.28084; return (k<10?k.toFixed(1):Math.round(k))+'k ft';} return fAlt(z); };
+  MARKS.forEach(function(m,i){
+    s+='<g class="lm" data-z="'+m.z+'" tabindex="0" role="button" aria-label="Jump to '+m.n+', '+fAlt(m.z)+'"><polyline points="'+(bx+bw)+','+ys[i]+' '+(bx+bw+8)+','+ys[i]+' '+(lx-6)+','+ly[i]+' '+(lx-2)+','+ly[i]+'"/><rect x="'+lx+'" y="'+(ly[i]-10)+'" width="'+(W-lx)+'" height="19" fill="transparent"/><text x="'+(lx+2)+'" y="'+(ly[i]+4)+'">'+m.n+' <tspan class="alt">'+lmAlt(m.z)+'</tspan></text></g>';
+  });
+  s+='<g id="mk"><line x1="'+(bx-4)+'" x2="'+(bx+bw+8)+'" y1="0" y2="0" stroke="var(--accent)" stroke-width="2.5"/><circle cx="'+(bx+bw+8)+'" cy="0" r="6" fill="var(--accent)" stroke="var(--paper)" stroke-width="2"/><rect class="mk-pill" x="0" y="-10" width="'+(bx-4)+'" height="20" rx="3"/><text class="mk-text" id="mkT" x="'+((bx-4)/2)+'" y="4" text-anchor="middle"></text></g></svg>';
+  const old=box.querySelector('svg'); if(old) old.remove();
+  box.insertAdjacentHTML('afterbegin',s);
+  $('drag').style.width=(bx+bw+16)+'px';
+}
+function colMarker(){ if(!CG) return; $('mk').setAttribute('transform','translate(0,'+CG.y(S.z)+')');
+  const z=S.z; $('mkT').textContent=us()?(z<30?loc(Math.round(z*3280.84/100)/10)+'k ft':loc(Math.round(z*0.621371))+' mi'):(z<100?(Math.round(z*10)/10):Math.round(z))+' km'; }
+
+/* ---------- charts ---------- */
+function svgOpen(W,H,label){return '<svg width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+label+'">';}
+function mount(id,html){const box=$(id), old=box.querySelector('svg'); if(old) old.remove(); box.insertAdjacentHTML('beforeend',html); return box;}
+function chartW(id){return Math.max(240,$(id).clientWidth-14);}
+function altTicks(maxKm,stepKm,stepMi){const out=[]; if(us()){for(let m=0;m*1.609344<=maxKm+1e-6;m+=stepMi) out.push({z:m*1.609344,l:loc(m)});} else {for(let k=0;k<=maxKm;k+=stepKm) out.push({z:k,l:loc(k)});} return out;}
+const G={};
+
+function drawPressure(){
+  const W=chartW('pPlot'), H=300, m={l:58,r:14,t:10,b:38}, pw=W-m.l-m.r, ph=H-m.t-m.b, DEC=6.5, ZMAX=100;
+  const x=function(z){return m.l+z/ZMAX*pw;}, y=function(r){return m.t+(-Math.log10(r))/DEC*ph;};
+  let s=svgOpen(W,H,'Pressure against altitude from sea level to 100 km, on a scale where each gridline is ten times lower');
+  ['100%','10%','1%','0.1%','0.01%','0.001%','0.0001%'].forEach(function(l,i){const yy=m.t+i/DEC*ph; s+='<line class="grid" x1="'+m.l+'" x2="'+(W-m.r)+'" y1="'+yy+'" y2="'+yy+'"/><text class="ax" x="'+(m.l-7)+'" y="'+(yy+4)+'" text-anchor="end">'+l+'</text>';});
+  altTicks(ZMAX,20,10).forEach(function(t){s+='<text class="ax" x="'+x(t.z)+'" y="'+(H-m.b+15)+'" text-anchor="middle">'+t.l+'</text>';});
+  s+='<text class="axt" x="'+(m.l+pw/2)+'" y="'+(H-6)+'" text-anchor="middle">Altitude, '+(us()?'miles':'km')+'</text>';
+  let d=''; for(let z=0;z<=ZMAX;z+=0.5){d+=(z?'L':'M')+x(z).toFixed(1)+' '+y(atm(z).P/P0).toFixed(1);}
+  s+='<path d="'+d+'" fill="none" stroke="var(--s1)" stroke-width="2" stroke-linejoin="round"/>';
+  [[0.5,'Half the air is below '],[0.1,'90% is below '],[0.01,'99% is below '],[0.001,'99.9% is below ']].forEach(function(c){
+    const z=zAtPressure(c[0]); s+='<circle cx="'+x(z)+'" cy="'+y(c[0])+'" r="4" fill="var(--s1)" stroke="var(--panel)" stroke-width="2"/><text class="dl" x="'+(x(z)+9)+'" y="'+(y(c[0])-5)+'">'+c[1]+fAlt(z)+'</text>';});
+  s+='<line class="xh" x1="0" x2="0" y1="'+m.t+'" y2="'+(H-m.b)+'" stroke="var(--ink-3)" stroke-width="1" visibility="hidden"/>';
+  s+='<circle id="pDot" r="6" fill="var(--accent)" stroke="var(--panel)" stroke-width="2"/><text id="pOff" class="dl" x="'+(W-m.r-4)+'" y="'+(m.t+13)+'" text-anchor="end" style="fill:var(--accent)"></text></svg>';
+  mount('pPlot',s);
+  G.p={x:x,y:y,inv:function(px){const z=(px-m.l)/pw*ZMAX; return (z<0||z>ZMAX)?null:z;},
+    tip:function(z){return fAlt(z)+'<br>'+fPct(atm(z).P/P0*100)+' of sea level';}};
+}
+function drawWell(){
+  const W=chartW('gPlot'), H=300, m={l:58,r:16,t:10,b:38}, pw=W-m.l-m.r, ph=H-m.t-m.b, X0=Math.log10(4500), X1=Math.log10(650000), Y0=0.35, Y1=-4.3;
+  const x=function(r){return m.l+(Math.log10(r)-X0)/(X1-X0)*pw;}, y=function(q){return m.t+(Y0-Math.log10(q))/(Y0-Y1)*ph;};
+  let s=svgOpen(W,H,'Earth gravity against distance from Earth centre, with the space station, GPS, geostationary satellites and the Moon');
+  [['100%',1],['10%',.1],['1%',.01],['0.1%',.001],['0.01%',1e-4]].forEach(function(t){s+='<line class="grid" x1="'+m.l+'" x2="'+(W-m.r)+'" y1="'+y(t[1])+'" y2="'+y(t[1])+'"/><text class="ax" x="'+(m.l-7)+'" y="'+(y(t[1])+4)+'" text-anchor="end">'+t[0]+'</text>';});
+  (us()?[10000,100000].map(function(v){return [v*1.609344,loc(v)];}):[[10000,'10,000'],[100000,'100,000']]).forEach(function(t){s+='<line class="grid" x1="'+x(t[0])+'" x2="'+x(t[0])+'" y1="'+m.t+'" y2="'+(H-m.b)+'"/><text class="ax" x="'+x(t[0])+'" y="'+(H-m.b+15)+'" text-anchor="middle">'+t[1]+'</text>';});
+  s+='<text class="axt" x="'+(m.l+pw/2)+'" y="'+(H-6)+'" text-anchor="middle">Distance from Earth\'s centre, '+(us()?'miles':'km')+'</text>';
+  const q=function(r){return Math.pow(RE/r,2);};
+  s+='<line x1="'+x(RE)+'" y1="'+y(1)+'" x2="'+x(600000)+'" y2="'+y(q(600000))+'" stroke="var(--s1)" stroke-width="2"/>';
+  s+='<line x1="'+x(RE)+'" y1="'+y(1)+'" x2="'+x(RE+1000)+'" y2="'+y(q(RE+1000))+'" stroke="var(--accent)" stroke-width="5" stroke-linecap="round"/>';
+  const g0=GM/Math.pow(RE*1000,2), narrow=W<480;
+  const pts=[{n:'Space station',r:6795,T:92.9*60,lap:'93 min'},{n:'GPS',r:26560,T:43082,lap:'11 h 58 min'},{n:'Geostationary',r:42164,T:86164,lap:'23 h 56 min'},{n:'Moon',r:384400,T:2360591,lap:'27.3 days'}];
+  s+='<text class="dl" x="'+(x(RE)-2)+'" y="'+(y(1)-12)+'">Sea level 100%</text><circle cx="'+x(RE)+'" cy="'+y(1)+'" r="4" fill="var(--s1)" stroke="var(--panel)" stroke-width="2"/>';
+  pts.forEach(function(p,i){ const acc=4*Math.PI*Math.PI*p.r*1000/(p.T*p.T)/g0, px=x(p.r), py=y(acc), lbl=p.n+' '+fPct(acc*100);
+    s+='<circle cx="'+px+'" cy="'+py+'" r="4" fill="var(--s1)" stroke="var(--panel)" stroke-width="2"><title>'+p.n+': one lap in '+p.lap+'</title></circle>';
+    if(i===3) s+='<text class="dl" x="'+(px-10)+'" y="'+(py+14)+'" text-anchor="end">'+lbl+'</text><text class="ax" x="'+(px-10)+'" y="'+(py+28)+'" text-anchor="end">lap: '+p.lap+'</text>';
+    else s+='<text class="dl" x="'+(px+12)+'" y="'+(py+(i===0?3:-3))+'">'+lbl+(narrow?'':' <tspan class="ax">lap: '+p.lap+'</tspan>')+'</text>'; });
+  s+='<line class="xh" x1="0" x2="0" y1="'+m.t+'" y2="'+(H-m.b)+'" stroke="var(--ink-3)" stroke-width="1" visibility="hidden"/>';
+  s+='<circle id="gDot" r="5" fill="var(--accent)" stroke="var(--panel)" stroke-width="2"/></svg>';
+  mount('gPlot',s);
+  G.g={x:x,y:y,q:q,inv:function(px){const r=Math.pow(10,X0+(px-m.l)/pw*(X1-X0)); return (r<RE||r>600000)?null:r;},
+    tip:function(r){const d=us()?loc(Math.round(r*0.621371/100)*100)+' mi':loc(Math.round(r/100)*100)+' km'; return d+' from centre<br>'+fPct(q(r)*100)+' of surface gravity';}};
+}
+function drawGases(){
+  const W=chartW('cPlot'), H=280, m={l:44,r:14,t:8,b:38}, pw=W-m.l-m.r, ph=H-m.t-m.b;
+  const x=function(z){return m.l+z/1000*pw;}, y=function(f){return m.t+(1-f)*ph;};
+  let s=svgOpen(W,H,'Share of each gas from sea level to 1,000 km: nitrogen and oxygen below, atomic oxygen in the middle, helium and hydrogen at the top');
+  const zs=[0]; for(let z=86;z<=1000;z+=4) zs.push(z); if(zs[zs.length-1]!==1000) zs.push(1000);
+  const cum=zs.map(function(z){const f=mix(z); let t=0, tot=SPK.reduce(function(a,k){return a+f[k];},0); return [0].concat(SPK.map(function(k){t+=f[k]/tot; return t;}));});
+  GAS.forEach(function(gdef,k){ let d=''; zs.forEach(function(z,i){d+=(i?'L':'M')+x(z).toFixed(1)+' '+y(cum[i][k+1]).toFixed(1);});
+    for(let i=zs.length-1;i>=0;i--) d+='L'+x(zs[i]).toFixed(1)+' '+y(cum[i][k]).toFixed(1);
+    s+='<path d="'+d+'Z" fill="var('+gdef[3]+')" stroke="var(--panel)" stroke-width="1.5" stroke-linejoin="round"/>'; });
+  [[0,'0%'],[.5,'50%'],[1,'100%']].forEach(function(t){s+='<text class="ax" x="'+(m.l-7)+'" y="'+(y(t[0])+4)+'" text-anchor="end">'+t[1]+'</text>';});
+  altTicks(1000,200,100).forEach(function(t){s+='<line x1="'+x(t.z)+'" x2="'+x(t.z)+'" y1="'+(H-m.b)+'" y2="'+(H-m.b+4)+'" stroke="var(--ink-3)"/><text class="ax" x="'+x(t.z)+'" y="'+(H-m.b+16)+'" text-anchor="middle">'+t.l+'</text>';});
+  s+='<text class="axt" x="'+(m.l+pw/2)+'" y="'+(H-6)+'" text-anchor="middle">Altitude, '+(us()?'miles':'km')+'</text>';
+  [['N₂',60,.40],['O₂',45,.89],['O',400,.52],['He',900,.50]].forEach(function(l){const px=x(l[1]), py=y(l[2]), w=l[0].length*8+12;
+    s+='<rect x="'+(px-w/2)+'" y="'+(py-10)+'" width="'+w+'" height="19" rx="3" fill="var(--panel)"/><text class="dl" x="'+px+'" y="'+(py+4)+'" text-anchor="middle">'+l[0]+'</text>';});
+  s+='<line class="xh" x1="0" x2="0" y1="'+m.t+'" y2="'+(H-m.b)+'" stroke="var(--ink)" stroke-width="1" visibility="hidden"/>';
+  s+='<g id="cMk"><line x1="0" x2="0" y1="'+m.t+'" y2="'+(H-m.b)+'" stroke="var(--panel)" stroke-width="5"/><line x1="0" x2="0" y1="'+m.t+'" y2="'+(H-m.b)+'" stroke="var(--accent)" stroke-width="2.5"/></g></svg>';
+  mount('cPlot',s);
+  G.c={x:x,inv:function(px){const z=(px-m.l)/pw*1000; return (z<0||z>1000)?null:z;},
+    tip:function(z){const f=mix(z); return fAlt(z)+'<br>'+GAS.filter(function(g){return f[g[0]]>=0.0005;}).map(function(g){return g[1]+' '+fPct(f[g[0]]*100);}).join('<br>');}};
+}
+function chartMarkers(){
+  const z=S.z, pd=$('pDot'), po=$('pOff');
+  if(pd){ if(z<=100){pd.setAttribute('visibility','visible'); pd.setAttribute('cx',G.p.x(z)); pd.setAttribute('cy',G.p.y(atm(z).P/P0)); po.textContent='';}
+    else {pd.setAttribute('visibility','hidden'); po.textContent='You are off this chart: '+fPct(atm(z).P/P0*100);} }
+  const gd=$('gDot'); if(gd){gd.setAttribute('cx',G.g.x(RE+z)); gd.setAttribute('cy',G.g.y(G.g.q(RE+z)));}
+  const cm=$('cMk'); if(cm) cm.setAttribute('transform','translate('+G.c.x(z)+',0)');
+}
+function wireHover(id,key,clickSets){
+  const box=$(id), tip=box.querySelector('.tip');
+  const hide=function(){tip.hidden=true; const xh=box.querySelector('.xh'); if(xh) xh.setAttribute('visibility','hidden');};
+  const at=function(e){const svg=box.querySelector('svg'); if(!svg) return null; const r=svg.getBoundingClientRect(); return {px:e.clientX-r.left,w:r.width,off:r.left-box.getBoundingClientRect().left};};
+  box.addEventListener('pointermove',function(e){const p=at(e); if(!p) return; const v=G[key].inv(p.px); if(v==null){hide();return;}
+    const xh=box.querySelector('.xh'); xh.setAttribute('x1',p.px); xh.setAttribute('x2',p.px); xh.setAttribute('visibility','visible');
+    tip.innerHTML=G[key].tip(v); tip.hidden=false; const tw=tip.offsetWidth; let left=p.px+p.off+12; if(left+tw>box.clientWidth-4) left=p.px+p.off-12-tw; tip.style.left=Math.max(4,left)+'px';});
+  box.addEventListener('pointerleave',hide);
+  if(clickSets) box.addEventListener('click',function(e){const p=at(e); if(!p) return; const v=G[key].inv(p.px); if(v!=null) setAlt(v,true);});
+}
+
+/* ---------- readouts ---------- */
+function setText(id,t){$(id).textContent=t;}
+function render(){
+  const z=S.z, a=atm(z), lat=S.lat;
+  setText('hAlt',fAlt(z)); setText('hAltSub',fAltAlt(z)+(us()&&z<30?' · '+(z*0.621371).toFixed(1)+' mi':''));
+  const L=LAYERS.filter(function(l){return z>=l.a;}).pop();
+  setText('layerName',L.n); setText('layerRange',fAlt(L.a)+' to '+(L.b>=1000?(us()?'about 6,200 mi':'about 10,000 km'):fAlt(L.b))); setText('layerText',L.t);
+  const pr=a.P/P0;
+  setText('rP',fPct(pr*100)+' of sea level'); setText('rPn',fPress(a.P));
+  setText('rAbove',pr>=1e-4?fPct(pr*100):'1 part in '+big(1/pr));
+  const dr=a.rho/RHO0; setText('rRho',dr>=0.1?fPct(dr*100)+' of sea level':big(1/dr)+'× thinner');
+  setText('rT',fTemp(a.T)); setText('rTn',z>=86?'Molecule speed, not felt heat. A mid-cycle value: it swings by hundreds of degrees with solar activity.':'');
+  setText('rN',sci(a.P/(KB*a.T)/1e6));
+  setText('rMfp',fLen(mfp(a.T,a.P)));
+  const b=boilC(a.P);
+  if(b==null){setText('rBoil','cannot stay liquid'); setText('rBoilN','Below 0.6% of sea-level pressure, ice turns straight to vapour.');}
+  else {setText('rBoil',us()?Math.round(b*9/5+32)+' °F':Math.round(b)+' °C'); setText('rBoilN',b<=37.2?'Below body temperature. Past this point, the Armstrong limit, body fluids boil without a pressure suit.':'');}
+  // gases
+  const f=mix(z), tot=SPK.reduce(function(s,k){return s+f[k];},0);
+  $('mixBar').innerHTML=GAS.map(function(g){const w=f[g[0]]/tot*100; return w<0.15?'':'<i style="flex:'+w.toFixed(2)+' 1 0;background:var('+g[3]+')" title="'+g[2]+' '+fPct(w)+'"></i>';}).join('');
+  $('mixRows').innerHTML=GAS.map(function(g){return '<div class="row"><span class="k"><span class="sw" style="background:var('+g[3]+')"></span>'+g[1]+' · '+g[2]+'</span><span class="v">'+fShare(f[g[0]])+'</span></div>';}).join('');
+  setText('mixNote',z<86?'Plus 0.04% carbon dioxide, and water vapour near the ground. Turbulence keeps this mix nearly the same from sea level to about '+(us()?'50 miles':'85 km')+'.':'Too little air to stir up here, so each gas thins at its own rate. Heavy ones fade fast and light ones linger. Sunlight splits O₂ into single atoms.');
+  // gravity
+  const gr=gRatio(z), g=gAt(z,lat);
+  setText('rG',fPct(gr*100)+' of sea level'); setText('rGn',us()?(g*3.28084).toFixed(2)+' ft/s² · '+g.toFixed(2)+' m/s²':g.toFixed(3)+' m/s²');
+  const wr=g/gAt(0,lat);
+  setText('rWk',us()?'A 200 lb person on a tower this tall weighs':'Under a 100 kg person on a tower this tall, a scale reads');
+  setText('rW',us()?(200*wr).toFixed(1)+' lb':(100*wr).toFixed(1)+' kg');
+  const well=z/(RE+z), eLift=GM*(1/(RE*1000)-1/((RE+z)*1000));
+  setText('rWell',fPct(well*100)); setText('rWellN','Lifting 1 kg here takes '+fnum(eLift/1e6)+' MJ. Full escape takes 62.6 MJ.');
+  const vo=vOrb(z); setText('rOrb',fSpd(vo)); setText('rOrbN','One lap in '+(2*Math.PI*(RE+z)*1000/vo/60).toFixed(1)+' min'+(z<150?', if there were no air in the way':''));
+  setText('rEsc',fSpd(vEsc(z)));
+  // spin
+  setText('latVal',lat+'°');
+  const vg=vSpin(0,lat), va=vSpin(z,lat);
+  setText('rVg',fSpd(vg)); setText('rVa',z>=600?'no set speed':fSpd(va));
+  setText('rVaN',z>=600?'Up here atoms fly freely on their own arcs and no longer move as one body of air.':(z>=86?'An average. Winds this high commonly run 200 to 700 mph (300 to 1,100 km/h).':'Winds are the differences from this. Jet streams can exceed 250 mph (400 km/h).'));
+  setText('rRatio',lat>=89.5?'no spin speed at the pole':(vo/va).toFixed(1)+'×');
+  setText('rFling',lat>=89.5?'0%':fPct(cfVert(z,lat)/(g+cfVert(z,lat))*100));
+  colMarker(); chartMarkers();
+}
+function setAlt(z,sync){ z=Math.max(0,Math.min(1000,z)); S.z=z; if(sync) $('altRange').value=Math.round(frac(z)*1000); render(); }
+function drawAll(){ drawColumn(); drawPressure(); drawWell(); drawGases();
+  $('gasLegend').innerHTML=GAS.map(function(g){return '<span><span class="sw" style="background:var('+g[3]+')"></span>'+g[1]+' '+g[2]+'</span>';}).join('');
+  $('halfTxt').textContent=fAlt(zAtPressure(0.5));
+  $('uUS').setAttribute('aria-pressed',us()); $('uSI').setAttribute('aria-pressed',!us()); render(); }
+
+/* ---------- events ---------- */
+$('altRange').addEventListener('input',function(e){setAlt(unfrac(e.target.value/1000),false);});
+$('latRange').addEventListener('input',function(e){S.lat=+e.target.value; render();});
+function setUnits(u){S.units=u; try{localStorage.setItem('sl2s-units',u);}catch(e){} drawAll();}
+$('uUS').addEventListener('click',function(){setUnits('us');});
+$('uSI').addEventListener('click',function(){setUnits('si');});
+const drag=$('drag'); let dragging=false;
+function dragTo(e){const r=$('col').getBoundingClientRect(); setAlt(unfrac((CG.bot-(e.clientY-r.top))/CG.ph),true);}
+drag.addEventListener('pointerdown',function(e){dragging=true; try{drag.setPointerCapture(e.pointerId);}catch(x){} dragTo(e);});
+drag.addEventListener('pointermove',function(e){if(dragging) dragTo(e);});
+['pointerup','pointercancel'].forEach(function(t){drag.addEventListener(t,function(){dragging=false;});});
+function lmJump(e){const g=e.target.closest&&e.target.closest('.lm'); if(g) setAlt(+g.getAttribute('data-z'),true);}
+$('col').addEventListener('click',lmJump);
+$('col').addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault(); lmJump(e);}});
+wireHover('pPlot','p',true); wireHover('gPlot','g',false); wireHover('cPlot','c',true);
+let rt=null, lastW=0;
+window.addEventListener('resize',function(){clearTimeout(rt); rt=setTimeout(function(){if(window.innerWidth!==lastW){lastW=window.innerWidth; drawAll();}},120);});
+lastW=window.innerWidth;
+$('altRange').value=Math.round(frac(S.z)*1000);
+drawAll();
+if(document.fonts&&document.fonts.ready) document.fonts.ready.then(drawAll);
+})();
+</script>
+
+</body>
+</html>
